@@ -1,135 +1,190 @@
-Got it! Here's an updated README with details about the RPI-Seism WebSocket server:
+# RPI-SEISM Web
+
+Angular‑based real‑time dashboard for the [rpi‑seism](https://github.com/ch3p4ll3/rpi-seism) seismometer system.  
+Connects to the Raspberry Pi WebSocket server to display live seismic waveforms and their frequency spectra (FFT).
 
 ---
 
-# RPI-Seism: Real-time Seismic Station Monitoring
+## Features
 
-## Overview
+- **Live waveform display** – 3‑channel (EHZ, EHN, EHE) time series with a sliding window.
+- **Real‑time FFT spectrum** – frequency domain view computed from the latest 512 samples.
+- **WebSocket integration** – receives decimated data (25 Hz default) from the rpi‑seism backend.
+- **Responsive charts** – built with PrimeNG Chart (Chart.js wrapper) and customised for seismology.
+- **Automatic channel discovery** – dynamically adds channels as they appear in the data stream.
 
-RPI-Seism is an Angular-based dashboard application designed for real-time monitoring of seismic data. The application connects to the **RPI-Seism WebSocket server** to receive and visualize seismic data. The dashboard includes both time-domain waveforms and frequency-domain power spectrums (via FFT) for each seismic channel.
+---
 
-Key features:
+## Dependencies
 
-* **Real-Time Data**: Displays velocity waveforms and FFT power spectrums in real-time as seismic data arrives.
-* **WebSocket Integration**: Connects to the RPI-Seism server via WebSocket for continuous data updates.
-* **Data Visualization**: Interactive charts for visualizing time-domain waveforms and frequency-domain FFT spectrums.
-* **Responsive Design**: Layout adapts to different screen sizes for desktop and mobile users.
+- [Angular](https://angular.io/) 21 (standalone components)
+- [PrimeNG](https://primeng.org/) – UI component library (Chart module)
+- [Chart.js](https://www.chartjs.org/) – underlying charting library
+- [fft.js](https://github.com/indutny/fft.js) – fast Fourier transform for real‑time spectrum analysis
 
-## Prerequisites
-
-Before you begin, ensure you have the following installed on your development environment:
-
-* **Node.js** (v14 or higher)
-* **Angular CLI** (v12 or higher)
+---
 
 ## Installation
 
-### Step 1: Clone the repository
+### Prerequisites
 
-Clone this repository to your local machine:
+- Node.js 18+ and npm
+- Angular CLI (optional, for development)
 
+### Setup
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/ch3p4ll3/rpi-seism-web.git
+   cd rpi-seism-web
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Configure the WebSocket endpoint (optional)  
+   By default, the application connects to `ws://localhost:8765`.  
+   If your rpi‑seism backend runs on a different IP or port, modify the `WebsocketService` (see `src/app/services/websocket-service.ts`) or set it via environment variables.
+
+4. Start the development server:
+   ```bash
+   ng serve
+   ```
+   Navigate to `http://localhost:4200`. The app will automatically reload if you change any source files.
+
+### Building for Production
+
+To create a production build:
 ```bash
-git clone https://github.com/your-repository/rpi-seism-dashboard.git
-cd rpi-seism-dashboard
+ng build --configuration production
+```
+The output will be in the `dist/` directory. You can serve these static files with any web server (e.g., nginx, Apache) and point them to your running rpi‑seism WebSocket server.
+
+---
+
+## Usage
+
+Once the application is running and the rpi‑seism backend is active, the dashboard will:
+
+- Establish a WebSocket connection.
+- Wait for incoming `SensorData` messages.
+- For each channel, display:
+  - A **waveform chart** (time domain) showing the last ~5 seconds of data (512 points).
+  - An **FFT spectrum** (frequency domain) computed from the same 512‑point window.
+
+The charts update automatically as new data arrives.
+
+---
+
+## Data Format
+
+The WebSocket expects messages in the following JSON format (matching the `SensorData` entity):
+
+```json
+{
+  "channel": "EHZ",
+  "timestamp": "2025-03-23T12:34:56.789Z",
+  "fs": 25,
+  "data": [123, 125, ...]
+}
 ```
 
-### Step 2: Install Dependencies
+- `channel` – string identifier (e.g., `EHZ`, `EHN`, `EHE`)
+- `timestamp` – ISO 8601 timestamp of the last sample
+- `fs` – sampling frequency of the **decimated** data (e.g., 25 Hz)
+- `data` – array of integer/float values (new samples since last update)
 
-Run the following command to install all required dependencies:
+The backend (rpi‑seism) sends updates every second with a batch of decimated samples.
 
-```bash
-npm install
+---
+
+## Project Structure
+
+```
+rpi-seism-web/
+├── src/
+│   ├── app/
+│   │   ├── dashboard/               # Main dashboard component
+│   │   │   ├── dashboard.html        # Template
+│   │   │   └── dashboard.ts          # Component logic (chart updates, FFT)
+│   │   ├── entities/
+│   │   │   └── sensor_data.ts        # SensorData interface
+│   │   ├── services/
+│   │   │   └── websocket-service.ts  # WebSocket connection handling
+│   │   ├── app.component.ts
+│   │   ├── app.config.ts
+│   │   └── app.routes.ts
+│   ├── assets/
+│   ├── index.html
+│   ├── main.ts
+│   └── styles.scss
+├── angular.json
+├── package.json
+└── README.md
 ```
 
-### Step 3: Start the Development Server
+---
 
-To launch the development server, run:
+## Customisation
 
-```bash
-ng serve
-```
+### Chart Appearance
 
-The app will be available at `http://localhost:4200` in your browser.
+Chart options are defined in `dashboard.ts` (`initChartOptions()`).  
+You can adjust colours, axes, grid lines, and FFT scale (linear/logarithmic) to suit your preferences.
 
-## RPI-Seism WebSocket Server
+### FFT Window Size
 
-This application connects to a **WebSocket server** created by the RPI-Seism server project to fetch seismic data. The WebSocket connection is established to receive the data in real-time.
+The FFT uses a 512‑point window (`MAX_POINTS`). Change this constant to trade off frequency resolution vs. responsiveness.  
+(Note: 512 is a power of two, required by `fft.js`.)
 
-### WebSocket Server Details
+### WebSocket URL
 
-* **Server URL**: `ws://192.168.138.128:8765`
-* **Data Format**: The server sends data in the following format:
+Modify the WebSocket URL in `websocket-service.ts` if your backend runs on a different host/port.
 
-  * `channel`: The seismic channel identifier (e.g., "channel-1").
-  * `data`: Array of seismic data points (e.g., waveform data).
-  * `timestamp`: The timestamp of when the data was recorded.
+---
 
-### Setting Up the RPI-Seism WebSocket Server
+## Integration with rpi‑seism
 
-If you're setting up your own RPI-Seism server, you'll need to ensure that the server is up and running on the specified WebSocket URL (`ws://192.168.138.128:8765`).
+This frontend is designed to work seamlessly with the [rpi‑seism](https://github.com/ch3p4ll3/rpi-seism) backend.  
+The backend’s `WebSocketSender` thread sends decimated data exactly in the format expected by this Angular app.
 
-For more details on setting up the server, please refer to the **[RPI-Seism Server Project](#link-to-python-repository)**.
+Make sure the backend is running and the WebSocket server is enabled (default port `8765`).
 
-## Components
+---
 
-### `dashboard.component.ts`
+## Troubleshooting
 
-* **Channels**: Each seismic channel is represented as a dataset with its corresponding time-domain waveform and FFT power spectrum.
-* **Charts**: The application uses `p-chart` (PrimeNG) to render line charts for both the waveform and FFT spectrum.
-* **Data Updates**: The `updateChart()` method listens to incoming WebSocket messages and updates the charts with new data.
+- **No data / charts empty**  
+  - Check that the rpi‑seism backend is running and the WebSocket server is active.  
+  - Verify the WebSocket URL in the service matches your backend’s IP/port.  
+  - Open the browser’s developer console to see if there are connection errors.
 
-### `websocket-service.ts`
+- **FFT not updating**  
+  - Ensure enough samples have been received (at least `MAX_POINTS`).  
+  - The FFT computation runs inside the Angular zone; check for any JavaScript errors.
 
-* **WebSocket Connection**: The service manages the WebSocket connection to the RPI-Seism server and ensures automatic reconnection if the connection is lost.
-* **Data Subscription**: The `getMessages()` method listens to incoming sensor data and sends it to the `Dashboard` component for visualization.
+- **Chart rendering performance**  
+  - Reducing `MAX_POINTS` or the number of displayed channels can improve performance on low‑power devices.  
+  - Consider enabling `production` mode in Angular (`enableProdMode()`).
 
-### `sensor_data.ts`
-
-This file defines the `SensorData` interface to model the incoming sensor data:
-
-* `channel`: The seismic channel that the data came from.
-* `data`: The seismic data (an array of waveform values).
-* `timestamp`: The timestamp when the data was recorded.
-
-### `dashboard.html`
-
-This template defines the layout of the dashboard:
-
-* **Waveform Visualization**: Each channel has a line chart that visualizes the velocity waveform.
-* **FFT Visualization**: A line chart displays the power spectrum derived from the waveform using FFT.
-* **Status Indicators**: The dashboard shows the server status, last packet timestamp, and active channel information.
-
-## Customization
-
-### WebSocket Server URL
-
-If you need to change the WebSocket server URL (in case you're connecting to a different server), modify the `WS_URL` in `websocket-service.ts`:
-
-```typescript
-private readonly WS_URL = 'ws://your-server-address:port';
-```
-
-### Chart Options
-
-You can adjust the chart configurations in the `initChartOptions()` method. Customize elements such as:
-
-* Line colors (`borderColor`)
-* Aspect ratios and responsiveness
-* Axis configuration
-* Data labels and tooltips
-
-### Data Window Size and FFT Configuration
-
-The window size for the waveform and the number of FFT bins can be adjusted by modifying the `WINDOW_SIZE` and `MAX_POINTS` constants in `dashboard.component.ts`. Note that FFT works best with powers of 2 (e.g., 256, 512, 1024).
-
-## Technologies Used
-
-* **Angular**: The main framework for building the application.
-* **PrimeNG**: A UI component library used for charts (`p-chart`).
-* **RxJS**: For handling asynchronous data streams via WebSocket.
-* **FFT.js**: A JavaScript library used for performing FFT calculations.
-* **TailwindCSS**: For utility-first styling and responsive design.
+---
 
 ## License
 
-This project is licensed under the GNU GPL V3 License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the **GNU General Public License v3.0**. See the [LICENSE](LICENSE) file for details.
+
+---
+
+## Links
+
+- [rpi‑seism (backend)](https://github.com/ch3p4ll3/rpi-seism) – Raspberry Pi data acquisition software.
+- [rpi‑seism‑reader](https://github.com/ch3p4ll3/rpi-seism-reader) – Arduino firmware for the geophone digitizer.
+
+---
+
+## Acknowledgements
+
+- Built with [Angular](https://angular.io/) and [PrimeNG](https://primeng.org/).
+- FFT computation by [fft.js](https://github.com/indutny/fft.js).
