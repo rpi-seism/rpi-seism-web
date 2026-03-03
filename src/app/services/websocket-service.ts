@@ -15,16 +15,30 @@ export class WebsocketService {
    * Returns a stream of sensor data that automatically reconnects on failure.
    */
   getMessages(): Observable<SensorData> {
-    return this.connect().pipe(
+    return new Observable<SensorData>(observer => {
+      const socket$ = this.connect();
+
+      const sub = socket$.subscribe({
+        next: val => observer.next(val),
+        error: err => observer.error(err),
+        complete: () => observer.error('closed')  // treat close as error so retry fires
+      });
+
+      return () => {
+        sub.unsubscribe();
+        this.socket$ = null;  // force a new subject on next connect()
+      };
+    }).pipe(
       retry({
         delay: (error) => {
           console.warn('WebSocket disconnected. Retrying in 3s...', error);
+          this.socket$ = null;  // ensure connect() creates a fresh subject
           return timer(this.RECONNECT_INTERVAL);
         },
         resetOnSuccess: true
       }),
       catchError(err => {
-        console.error('WebSocket Error:', err);
+        console.error('WebSocket permanently failed:', err);
         return EMPTY;
       })
     );
