@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { WebsocketService } from '../services/websocket-service';
 import { ChartModule } from 'primeng/chart';
 import { SensorData } from '../entities/sensor_data';
+import { RouterModule } from '@angular/router';
 import FFT from 'fft.js';
 
 interface SpectrogramFrame {
@@ -13,7 +14,7 @@ interface SpectrogramFrame {
   selector: 'app-dashboard',
   standalone: true,
   templateUrl: './dashboard.html',
-  imports: [CommonModule, ChartModule]
+  imports: [CommonModule, ChartModule, RouterModule],
 })
 export class Dashboard implements OnInit {
   channels: { [key: string]: any } = {};
@@ -67,7 +68,7 @@ export class Dashboard implements OnInit {
     });
   }
 
-  // ─── FFT scale toggle ────────────────────────────────────────────────────────
+  //  FFT scale toggle 
 
   toggleFftScale() {
     this.fftLogarithmic = !this.fftLogarithmic;
@@ -84,7 +85,7 @@ export class Dashboard implements OnInit {
     this.cdref.detectChanges();
   }
 
-  // ─── Chart options ───────────────────────────────────────────────────────────
+  //  Chart options 
 
   private initChartOptions() {
     this.chartOptions = {
@@ -125,7 +126,7 @@ export class Dashboard implements OnInit {
     };
   }
 
-  // ─── Incoming data ───────────────────────────────────────────────────────────
+  //  Incoming data 
 
   updateChart(msg: SensorData) {
     const { channel, data, fs, timestamp } = msg;
@@ -156,7 +157,7 @@ export class Dashboard implements OnInit {
 
     const magnitudes = this.updateFFT(channel, dataset.data);
 
-    // ── detectChanges FIRST so the canvas is in the DOM before we draw ──
+    //  detectChanges FIRST so the canvas is in the DOM before we draw 
     // For a brand-new channel the @ViewChildren QueryList is not updated
     // until Angular runs change detection, so renderSpectrogram would find
     // no canvas element if called before this point.
@@ -168,7 +169,7 @@ export class Dashboard implements OnInit {
     }
   }
 
-  // ─── Channel initialisation ──────────────────────────────────────────────────
+  //  Channel initialisation 
 
   private initializeChannelArrays(channel: string, fs: number) {
     // fs is validated before this call — no NaN risk here
@@ -197,7 +198,7 @@ export class Dashboard implements OnInit {
     this.spectrogramFrames[channel] = [];
   }
 
-  // ─── FFT ─────────────────────────────────────────────────────────────────────
+  //  FFT 
 
   private applyHannWindow(data: number[]): number[] {
     const N = data.length;
@@ -235,7 +236,7 @@ export class Dashboard implements OnInit {
     return magnitudes;
   }
 
-  // ─── Spectrogram ─────────────────────────────────────────────────────────────
+  //  Spectrogram 
 
   private pushSpectrogramFrame(channel: string, magnitudes: number[]) {
     const frames = this.spectrogramFrames[channel];
