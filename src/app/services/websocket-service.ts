@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
 import { Observable, timer, retry, catchError, EMPTY } from 'rxjs';
 import { SensorData } from '../entities/sensor_data';
+import {environment} from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
@@ -9,7 +10,7 @@ import { SensorData } from '../entities/sensor_data';
 export class WebsocketService {
   private socket$: WebSocketSubject<SensorData> | null = null;
   private readonly RECONNECT_INTERVAL = 3000; // 3 seconds
-  private readonly WS_URL = 'ws://192.168.138.128:8765';
+  private readonly WS_URL = environment.websocketUrl;
 
   /**
    * Returns a stream of sensor data that automatically reconnects on failure.
